@@ -47,3 +47,13 @@ htmlcov/
 /tmp/
 *.done
 audio_filename.txt
+
+# Sensitive files - DO NOT COMMIT
+config.toml
+.env
+.env.*
+*credentials*
+*.key
+*.pem
+.telegram.sh
+telegram.sh

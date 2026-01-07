@@ -1,0 +1,10 @@
+# yt-transcribe configuration example
+# Copy this file to ~/.config/yt-transcribe/config.toml and fill in your values
+
+[telegram]
+token = "YOUR_BOT_TOKEN_HERE"  # Get from @BotFather on Telegram
+chat_id = "YOUR_CHAT_ID_HERE"  # Get from @userinfobot on Telegram
+
+[email]
+recipient = "your.email@example.com"
+# sender = "transcribe@hostname"  # Optional: defaults to current user@hostname

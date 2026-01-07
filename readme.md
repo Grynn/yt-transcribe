@@ -11,6 +11,7 @@ Transcribe and summarize video/audio content from YouTube, Twitter, and other so
 - 📱 **Telegram integration**: Auto-converts long summaries to PDF
 - 🚀 **MLX-accelerated**: Optimized for M-series chip performance
 - 🤖 **Codex CLI summaries**: Uses Codex to produce investment-focused insights
+- 🔗 **Full transcript sharing**: Uploads formatted transcripts to PrivateBin with secure links
 
 ## Requirements
 
@@ -45,7 +46,23 @@ This will build the package and install the `yt-transcribe` command to your PATH
 
 ## Configuration
 
-Configure via environment variables (add to `~/.zshrc` or `~/.bashrc`):
+### Option 1: Config File (Recommended)
+
+Create a config file at `~/.config/yt-transcribe/config.toml`:
+
+```bash
+# Copy the example config
+cp config.toml.example ~/.config/yt-transcribe/config.toml
+
+# Edit with your values
+nano ~/.config/yt-transcribe/config.toml
+```
+
+See `config.toml.example` for the template.
+
+### Option 2: Environment Variables
+
+Alternatively, configure via environment variables (add to `~/.zshrc` or `~/.bashrc`):
 
 ### Codex Configuration (required)
 
@@ -83,6 +100,14 @@ export TELEGRAM_CHAT_ID="123456789"
 To get these values:
 1. Create a bot via [@BotFather](https://t.me/botfather) on Telegram
 2. Get your chat ID by messaging [@userinfobot](https://t.me/userinfobot)
+
+### PrivateBin Configuration (optional)
+
+```bash
+export PRIVATEBIN_SERVER="https://privatebin.net"  # Default if not set
+```
+
+Transcripts are uploaded to PrivateBin for easy sharing. The default server is `privatebin.net`, but you can specify any PrivateBin instance.
 
 ## Usage
 
@@ -140,12 +165,15 @@ The tool generates several files in `/tmp/{url_hash}/`:
 - `{video_id}.opus` - Extracted audio
 - `{video_id}.txt` - Raw transcription
 - `{video_id}.md` - **Final summary** (this is sent via email/Telegram)
+- `privatebin_url.txt` - Link to full transcript on PrivateBin
 
 The markdown summary includes:
 - Original URL and title
 - Core insights for investment decisions
 - Non-consensus/contrarian views
 - Alpha signals (emerging trends, inefficiencies)
+
+The full transcript is uploaded to PrivateBin and the link is included in notifications.
 
 ## Notification Behavior
 

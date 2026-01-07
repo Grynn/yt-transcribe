@@ -4,6 +4,37 @@ version = "0.2.0"
 description = "Transcribe and summarize video/audio content with AI - optimized for Apple Silicon Macs"
 readme = "readme.md"
 requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "yt-transcribe contributors"}
+]
+keywords = [
+    "transcription",
+    "whisper",
+    "mlx",
+    "youtube",
+    "ai",
+    "summarization",
+    "apple-silicon",
+    "telegram",
+    "email",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
 dependencies = [
     "yt-dlp>=2024.0.0",
     "markdown>=3.5.0",
@@ -13,6 +44,11 @@ dependencies = [
     "tomli>=2.0.0; python_version < '3.11'",
     "privatebinapi>=1.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/YOUR_USERNAME/yt-transcribe"
+Repository = "https://github.com/YOUR_USERNAME/yt-transcribe"
+Issues = "https://github.com/YOUR_USERNAME/yt-transcribe/issues"
 
 [project.scripts]
 yt-transcribe = "yt_transcribe.main:cli"
