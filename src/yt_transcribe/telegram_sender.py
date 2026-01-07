@@ -1,5 +1,6 @@
 """Telegram sender with PDF support for long messages."""
 
+import asyncio
 import html
 import os
 import re
@@ -147,6 +148,58 @@ def markdown_to_pdf(markdown_content: str, output_path: str, title: str):
     doc.build(elements)
 
 
+async def _send_to_telegram_async(
+    markdown_content: str,
+    source_file: str,
+    title: str,
+    bot_token: str,
+    chat_id: str
+):
+    """
+    Internal async function to send content to Telegram.
+
+    Args:
+        markdown_content: Markdown text to send
+        source_file: Path to source markdown file (for reference)
+        title: Title for the message/document
+        bot_token: Telegram bot token
+        chat_id: Telegram chat ID
+    """
+    bot = Bot(token=bot_token)
+
+    formatted_text = format_markdown_for_telegram(markdown_content)
+
+    # Check message length (use formatted text length)
+    if len(formatted_text) <= TELEGRAM_CHAR_LIMIT:
+        # Send as text message with HTML formatting
+        await bot.send_message(
+            chat_id=chat_id,
+            text=formatted_text,
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=False
+        )
+    else:
+        # Content too long - convert to PDF and send as document
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            pdf_path = tmp.name
+
+        try:
+            markdown_to_pdf(markdown_content, pdf_path, title)
+
+            # Send PDF document
+            with open(pdf_path, "rb") as pdf_file:
+                await bot.send_document(
+                    chat_id=chat_id,
+                    document=pdf_file,
+                    filename=f"{title[:50]}.pdf",  # Limit filename length
+                    caption=f"Summary too long for message ({len(markdown_content)} chars), sent as PDF"
+                )
+        finally:
+            # Clean up temp file
+            if os.path.exists(pdf_path):
+                os.remove(pdf_path)
+
+
 def send_to_telegram(
     markdown_content: str,
     source_file: str,
@@ -187,40 +240,13 @@ def send_to_telegram(
             raise RuntimeError("Telegram chat ID not configured (set in ~/.config/yt-transcribe/config.toml or TELEGRAM_CHAT_ID env var)")
 
     try:
-        bot = Bot(token=bot_token)
-
-        formatted_text = format_markdown_for_telegram(markdown_content)
-
-        # Check message length (use formatted text length)
-        if len(formatted_text) <= TELEGRAM_CHAR_LIMIT:
-            # Send as text message with HTML formatting
-            bot.send_message(
-                chat_id=chat_id,
-                text=formatted_text,
-                parse_mode=ParseMode.HTML,
-                disable_web_page_preview=False
-            )
-        else:
-            # Content too long - convert to PDF and send as document
-            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-                pdf_path = tmp.name
-
-            try:
-                markdown_to_pdf(markdown_content, pdf_path, title)
-
-                # Send PDF document
-                with open(pdf_path, "rb") as pdf_file:
-                    bot.send_document(
-                        chat_id=chat_id,
-                        document=pdf_file,
-                        filename=f"{title[:50]}.pdf",  # Limit filename length
-                        caption=f"Summary too long for message ({len(markdown_content)} chars), sent as PDF"
-                    )
-            finally:
-                # Clean up temp file
-                if os.path.exists(pdf_path):
-                    os.remove(pdf_path)
-
+        asyncio.run(_send_to_telegram_async(
+            markdown_content=markdown_content,
+            source_file=source_file,
+            title=title,
+            bot_token=bot_token,
+            chat_id=chat_id
+        ))
     except Exception as e:
         raise RuntimeError(f"Failed to send to Telegram: {e}") from e
 

@@ -22,6 +22,7 @@ from .config import (
 from .email_sender import send_email
 from .codex_summarizer import summarize_with_codex
 from .telegram_sender import send_to_telegram
+from .privatebin_uploader import upload_transcript
 
 
 class StateManager:
@@ -49,7 +50,7 @@ class StateManager:
     def show_status(self):
         """Display current workflow status."""
         click.echo("\nResume mode - Current status:")
-        for step in ["info", "download", "transcribe", "summarize", "notify"]:
+        for step in ["info", "download", "transcribe", "summarize", "upload", "notify"]:
             click.echo(self.get_status(step))
         click.echo()
 
@@ -265,24 +266,65 @@ def summarize_transcription(
     return full_summary
 
 
-def send_notifications(summary: str, md_filename: str, state: StateManager, title: str):
-    """Step 5: Send notifications via email and Telegram."""
+def upload_full_transcript(
+    transcription: str,
+    title: str,
+    webpage_url: str,
+    state: StateManager
+) -> str:
+    """Step 5: Upload full transcript to PrivateBin."""
+    if state.is_complete("upload"):
+        click.echo("Using existing PrivateBin URL...")
+        return state.load_text("privatebin_url.txt").strip()
+
+    click.echo("Uploading full transcript to PrivateBin...")
+
+    try:
+        privatebin_url = upload_transcript(transcription, title, webpage_url)
+        click.echo(f"Full transcript uploaded: {privatebin_url}")
+
+        # Save URL for resume
+        state.save_text("privatebin_url.txt", privatebin_url)
+        state.mark_complete("upload")
+
+        return privatebin_url
+    except Exception as e:
+        click.echo(f"Warning: PrivateBin upload failed: {e}", err=True)
+        return None
+
+
+def send_notifications(
+    summary: str,
+    md_filename: str,
+    state: StateManager,
+    title: str,
+    privatebin_url: Optional[str] = None,
+    webpage_url: Optional[str] = None
+):
+    """Step 6: Send notifications via email and Telegram."""
     if state.is_complete("notify"):
         click.echo("Notifications already sent")
         return
 
     click.echo("Sending notifications...")
 
+    # Add PrivateBin link to summary if available
+    notification_summary = summary
+    if privatebin_url:
+        notification_summary += f"\n\n---\n\n**Full Transcript:** {privatebin_url}"
+    if webpage_url:
+        notification_summary += f"\n**Source:** {webpage_url}"
+
     # Send email
     try:
-        send_email(summary, title)
+        send_email(notification_summary, title)
         click.echo("✓ Email sent")
     except Exception as e:
         click.echo(f"Warning: Email failed: {e}", err=True)
 
     # Send to Telegram (text or PDF based on length)
     try:
-        send_to_telegram(summary, md_filename, title)
+        send_to_telegram(notification_summary, md_filename, title)
         click.echo("✓ Telegram sent")
     except Exception as e:
         click.echo(f"Warning: Telegram failed: {e}", err=True)
@@ -357,11 +399,16 @@ def cli(url: str, upgrade: bool, resume: bool):
     full_path = os.path.realpath(md_filename)
     click.echo(f"Summary saved to {full_path}")
 
-    # Step 5: Send notifications
-    send_notifications(summary, full_path, state, title)
+    # Step 5: Upload full transcript to PrivateBin
+    privatebin_url = upload_full_transcript(transcription, title, webpage_url, state)
+
+    # Step 6: Send notifications
+    send_notifications(summary, full_path, state, title, privatebin_url, webpage_url)
 
     click.echo("\nAll steps completed successfully!")
     click.echo(f"\nFinal output: {full_path}")
+    if privatebin_url:
+        click.echo(f"Full transcript: {privatebin_url}")
     click.echo(f"State directory: {state_dir}")
 
 
