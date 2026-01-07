@@ -20,7 +20,7 @@ from .config import (
     check_platform,
 )
 from .email_sender import send_email
-from .llm_summarizer import summarize_with_litellm
+from .codex_summarizer import summarize_with_codex
 from .telegram_sender import send_to_telegram
 
 
@@ -229,7 +229,7 @@ def summarize_transcription(
     state: StateManager,
     video_id: str
 ) -> str:
-    """Step 4: Summarize transcription using LiteLLM."""
+    """Step 4: Summarize transcription using Codex CLI."""
     md_filename = str(state.state_dir / f"{video_id}.md")
 
     if state.is_complete("summarize"):
@@ -245,13 +245,13 @@ def summarize_transcription(
         with open(md_filename, "r") as f:
             return f.read()
 
-    click.echo("Summarizing with LiteLLM...")
+    click.echo("Summarizing with Codex CLI...")
 
     # Create summary header
     summary_header = f"URL: {webpage_url}\nTitle: {title}\n\n"
 
-    # Get summary from LLM
-    summary_content = summarize_with_litellm(transcription, SUMMARIZATION_PROMPT)
+    # Get summary from Codex
+    summary_content = summarize_with_codex(transcription, SUMMARIZATION_PROMPT, state.state_dir)
 
     # Combine header and summary
     full_summary = summary_header + summary_content

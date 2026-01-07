@@ -56,30 +56,15 @@ The `cli()` function acts as the **orchestration agent**:
 
 **Design decision**: Using Click for CLI to maintain UNIX philosophy (simple, composable, flags-based).
 
-### 2. LLM Summarization (`llm_summarizer.py`)
+### 2. Codex Summarization (`codex_summarizer.py`)
 
-**Choice: LiteLLM**
+**Choice: Codex CLI**
 
-We chose LiteLLM over alternatives (LangChain, direct APIs) because:
-- **Unified interface** across providers (OpenAI, Anthropic, Google, Azure)
-- **Minimal dependencies** - lightweight, no bloat
-- **Environment-based config** - matches UNIX tool philosophy
-- **Model agnostic** - switch providers without code changes
-
-**Configuration pattern**:
-```bash
-# OpenAI
-export LITELLM_MODEL="gpt-4o"
-export OPENAI_API_KEY="sk-..."
-
-# Anthropic Claude
-export LITELLM_MODEL="claude-3-5-sonnet-20241022"
-export ANTHROPIC_API_KEY="sk-ant-..."
-
-# Google Gemini
-export LITELLM_MODEL="gemini/gemini-pro"
-export GEMINI_API_KEY="..."
-```
+We chose Codex CLI over direct API calls because:
+- **Single entry point** - one CLI command instead of SDK glue
+- **Credential reuse** - uses `codex login` or `OPENAI_API_KEY`
+- **Minimal Python deps** - no extra LLM libraries
+- **Easy model override** - optional `CODEX_MODEL` for quick switching
 
 **Prompt Engineering**:
 The system uses a focused investment analysis prompt:
@@ -125,12 +110,13 @@ subprocess.run(["uvx", "mlx_whisper", ...])
 
 #### Telegram Agent (`telegram_sender.py`)
 - Adaptive content delivery based on length
-- **Text mode** (< 4096 chars): Direct markdown message
+- **Text mode** (< 4096 chars): Direct HTML-formatted message
 - **PDF mode** (≥ 4096 chars): Convert to PDF, send as document
 
 **PDF generation strategy**:
-- WeasyPrint for HTML → PDF conversion
-- Styled for readability (proper margins, fonts, page breaks)
+- ReportLab for pure-Python PDF generation (no external dependencies)
+- Custom styles for headings, body text, bullet points
+- Markdown parsing with heading/bullet/formatting support
 - Temporary file pattern (no disk pollution)
 
 **Why not split long messages**:
@@ -138,13 +124,59 @@ subprocess.run(["uvx", "mlx_whisper", ...])
 - PDF is searchable and shareable
 - Better user experience for long-form content
 
+## Configuration System
+
+### XDG-Compliant Config File
+
+Configuration is stored in `~/.config/yt-transcribe/config.toml`:
+
+```toml
+[telegram]
+token = "123456:ABC-DEF..."
+chat_id = "123456789"
+
+[email]
+recipient = "me@example.com"
+# sender = "transcribe@hostname"  # Optional
+```
+
+**Config loading priority**:
+1. Environment variables (highest priority, for overrides)
+2. Config file values
+3. Sensible defaults where applicable
+
+**Why TOML over env vars**:
+- Persistent configuration (no shell profile edits)
+- Structured format (grouped by service)
+- XDG-compliant (`$XDG_CONFIG_HOME` respected)
+- Easy to backup/sync via dotfiles
+
+**Backwards compatibility**: Environment variables still work for CI/CD or temporary overrides:
+- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+- `EMAIL_RECIPIENT`, `EMAIL_SENDER`
+- `CODEX_MODEL`, `OPENAI_API_KEY`
+
+### Codex Authentication
+
+```bash
+# Option 1: Interactive login (stores credentials)
+bunx @openai/codex@latest login
+
+# Option 2: API key directly
+export OPENAI_API_KEY="sk-..."
+
+# Optional: Override model
+export CODEX_MODEL="o3"
+```
+
 ## Agentic Patterns Used
 
 ### 1. **Agent Specialization**
 Each module has a single responsibility:
-- `llm_summarizer.py` - Text understanding & synthesis
+- `codex_summarizer.py` - Text understanding & synthesis
 - `email_sender.py` - Email formatting & delivery
 - `telegram_sender.py` - Chat messaging & file delivery
+- `config.py` - Configuration loading & access
 
 ### 2. **Agent Coordination**
 The main orchestrator doesn't know implementation details:
@@ -164,8 +196,8 @@ except Exception as e:
 ```
 
 ### 4. **Agent Configuration**
-Environment variables enable runtime agent behavior changes:
-- Which LLM model to use
+Config file + environment variables enable flexible behavior changes:
+- Which Codex model to use
 - Email recipients
 - Telegram credentials
 
@@ -183,47 +215,22 @@ Environment variables enable runtime agent behavior changes:
 - **Modularity**: Importable functions vs shell functions
 - **Testing**: Unit testable vs shell script testing
 - **Dependencies**: Declarative (pyproject.toml) vs comments
+- **Configuration**: XDG config file vs scattered env vars
 
 ### What We Added
 - Email delivery with HTML formatting
-- PDF generation for long content
+- PDF generation for long content (ReportLab)
 - Platform validation (Apple Silicon)
-- Multi-provider LLM support via LiteLLM
-
-## Future Agentic Enhancements
-
-### Potential Agent Additions
-1. **Content routing agent**: Decide which notification channels based on content type/length
-2. **Translation agent**: Detect language, translate to preferred language
-3. **Fact-checking agent**: Verify claims against knowledge bases
-4. **Scheduling agent**: Queue processing for rate-limited APIs
-
-### Multi-Agent Collaboration
-Could implement **agent conversation patterns**:
-```
-Transcription → Summary → Critic → Revision → Final
-```
-
-Where:
-- Summarizer creates initial summary
-- Critic agent reviews for accuracy/completeness
-- Revision agent improves based on feedback
-
-### Observability
-Add agent tracing:
-```python
-@trace_agent
-def summarize_with_litellm(...):
-    # Automatic logging of inputs/outputs/timing
-```
+- Codex CLI integration for summarization
+- TOML config file support
 
 ## Performance Characteristics
 
 ### Bottlenecks
 1. **Download**: Network bandwidth limited
 2. **Transcription**: CPU/GPU bound (MLX accelerated)
-3. **Summarization**: API latency (network call to LLM)
-4. **PDF generation**: CPU bound (HTML rendering)
+3. **Summarization**: API latency (Codex CLI network call)
+4. **PDF generation**: CPU bound (ReportLab rendering)
 
 ### Optimization Opportunities
 - Parallel notification sending (already async-capable)
@@ -244,70 +251,26 @@ To support Linux/Windows, would need:
 - Add CUDA support detection
 - Use different audio backend (MLX uses Metal)
 
-## Configuration Best Practices
+## Security Notes
 
-### Environment Setup Example
-```bash
-# ~/.zshrc or ~/.bashrc
-
-# LLM Configuration
-export LITELLM_MODEL="claude-3-5-sonnet-20241022"
-export ANTHROPIC_API_KEY="sk-ant-..."
-
-# Email Configuration
-export EMAIL_RECIPIENT="me@example.com"
-export EMAIL_SENDER="transcribe@$(hostname)"
-
-# Telegram Configuration
-export TELEGRAM_BOT_TOKEN="123456:ABC-DEF..."
-export TELEGRAM_CHAT_ID="123456789"
-```
-
-### Security Notes
-- Never commit API keys to git
-- Use environment variables or secret management
-- sendmail respects system security policies
+- Config file permissions: ensure `~/.config/yt-transcribe/config.toml` is readable only by owner
+- Never commit config files with secrets to git
 - Telegram bot tokens should be treated as passwords
-
-## Testing Strategy
-
-### Unit Tests
-Each agent module should be independently testable:
-```python
-def test_markdown_to_html():
-    md = "# Test\n- Item 1"
-    html = markdown_to_html(md)
-    assert "<h1>Test</h1>" in html
-```
-
-### Integration Tests
-Test workflow steps with mocked dependencies:
-```python
-@patch('subprocess.run')
-def test_transcribe_audio(mock_run):
-    # Test transcription step
-```
-
-### End-to-End Tests
-Use test fixtures:
-- Sample video URL
-- Pre-downloaded audio
-- Known transcription output
-- Expected summary format
+- sendmail respects system security policies
 
 ## Lessons Learned
 
 ### From Bash to Python
 1. **State management is critical** - Don't assume operations complete
 2. **Resumability saves time** - Long-running processes will fail
-3. **Environment variables > config files** - For deployment flexibility
+3. **Config files > scattered env vars** - For persistent, organized settings
 4. **Single responsibility** - Each module does one thing well
 5. **Graceful degradation** - Email fails? Telegram should still work
 
 ### Agentic Design Benefits
 - **Composability**: Easy to add new notification channels
 - **Testability**: Mock individual agents in isolation
-- **Flexibility**: Swap LLM providers without refactoring
+- **Flexibility**: Swap Codex models without refactoring
 - **Maintainability**: Clear separation of concerns
 
 ## Conclusion
@@ -316,7 +279,7 @@ This architecture demonstrates that **agentic patterns** don't require complex f
 
 1. **State persistence** enables fault tolerance
 2. **Agent specialization** improves maintainability
-3. **Environment configuration** provides flexibility
+3. **XDG-compliant configuration** provides clean settings management
 4. **Graceful failure** ensures partial success
 5. **Platform optimization** leverages hardware capabilities
 

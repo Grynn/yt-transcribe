@@ -1,12 +1,15 @@
 """Email sender using macOS local MTA (sendmail)."""
 
 import os
+import shutil
 import subprocess
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Optional
 
 import markdown
+
+from .config import get_email_recipient, get_email_sender
 
 
 # CSS for email-friendly HTML
@@ -157,15 +160,15 @@ def send_email(
     Raises:
         RuntimeError: If sendmail fails
     """
-    # Get recipient and sender
+    # Get recipient and sender from config or environment
     if recipient is None:
-        recipient = os.getenv("EMAIL_RECIPIENT")
+        recipient = get_email_recipient()
         if not recipient:
             # Default to current user
             recipient = os.getenv("USER", "user") + "@localhost"
 
     if sender is None:
-        sender = os.getenv("EMAIL_SENDER")
+        sender = get_email_sender()
         if not sender:
             # Default to current user@hostname
             import socket
@@ -188,11 +191,11 @@ def send_email(
     msg.attach(MIMEText(plain_text, "plain"))
     msg.attach(MIMEText(html_content, "html"))
 
-    # Send via sendmail
+    # Send via local sendmail-compatible MTA
     try:
-        sendmail_path = "/usr/sbin/sendmail"
+        sendmail_path = shutil.which("sendmail") or "/usr/sbin/sendmail"
         if not os.path.exists(sendmail_path):
-            raise RuntimeError("sendmail not found at /usr/sbin/sendmail")
+            raise RuntimeError("sendmail not found on PATH or at /usr/sbin/sendmail")
 
         process = subprocess.Popen(
             [sendmail_path, "-t", "-oi"],

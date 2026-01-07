@@ -1,5 +1,6 @@
 """Telegram sender with PDF support for long messages."""
 
+import html
 import os
 import re
 import tempfile
@@ -18,7 +19,7 @@ from reportlab.platypus import (
 from telegram import Bot
 from telegram.constants import ParseMode
 
-from .config import TELEGRAM_CHAR_LIMIT
+from .config import TELEGRAM_CHAR_LIMIT, get_telegram_chat_id, get_telegram_token
 
 
 def markdown_to_pdf(markdown_content: str, output_path: str, title: str):
@@ -174,27 +175,29 @@ def send_to_telegram(
     Raises:
         RuntimeError: If Telegram send fails
     """
-    # Get credentials
+    # Get credentials from config or environment
     if bot_token is None:
-        bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+        bot_token = get_telegram_token()
         if not bot_token:
-            raise RuntimeError("TELEGRAM_BOT_TOKEN environment variable not set")
+            raise RuntimeError("Telegram bot token not configured (set in ~/.config/yt-transcribe/config.toml or TELEGRAM_BOT_TOKEN env var)")
 
     if chat_id is None:
-        chat_id = os.getenv("TELEGRAM_CHAT_ID")
+        chat_id = get_telegram_chat_id()
         if not chat_id:
-            raise RuntimeError("TELEGRAM_CHAT_ID environment variable not set")
+            raise RuntimeError("Telegram chat ID not configured (set in ~/.config/yt-transcribe/config.toml or TELEGRAM_CHAT_ID env var)")
 
     try:
         bot = Bot(token=bot_token)
 
-        # Check message length
-        if len(markdown_content) <= TELEGRAM_CHAR_LIMIT:
-            # Send as text message with markdown formatting
+        formatted_text = format_markdown_for_telegram(markdown_content)
+
+        # Check message length (use formatted text length)
+        if len(formatted_text) <= TELEGRAM_CHAR_LIMIT:
+            # Send as text message with HTML formatting
             bot.send_message(
                 chat_id=chat_id,
-                text=markdown_content,
-                parse_mode=ParseMode.MARKDOWN_V2,
+                text=formatted_text,
+                parse_mode=ParseMode.HTML,
                 disable_web_page_preview=False
             )
         else:
@@ -222,17 +225,49 @@ def send_to_telegram(
         raise RuntimeError(f"Failed to send to Telegram: {e}") from e
 
 
-def escape_markdown_v2(text: str) -> str:
-    """
-    Escape special characters for Telegram MarkdownV2.
+def format_markdown_for_telegram(markdown_content: str) -> str:
+    """Convert basic markdown to Telegram-compatible HTML."""
+    lines = markdown_content.splitlines()
+    formatted_lines = []
 
-    Args:
-        text: Text to escape
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            formatted_lines.append("")
+            continue
 
-    Returns:
-        Escaped text
-    """
-    special_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
-    for char in special_chars:
-        text = text.replace(char, f'\\{char}')
-    return text
+        if stripped.startswith("#"):
+            heading_text = stripped.lstrip("#").strip()
+            formatted_lines.append(f"<b>{html.escape(heading_text)}</b>")
+            continue
+
+        bullet_match = re.match(r"^[-*]\s+(.*)$", stripped)
+        if bullet_match:
+            content = bullet_match.group(1)
+            formatted_lines.append(f"- {_format_inline_html(content)}")
+            continue
+
+        formatted_lines.append(_format_inline_html(stripped))
+
+    return "\n".join(formatted_lines)
+
+
+def _format_inline_html(text: str) -> str:
+    """Format bold markdown segments into Telegram HTML."""
+    bold_segments: list[str] = []
+
+    def replace_bold(match: re.Match[str]) -> str:
+        content = match.group(1) or match.group(2)
+        bold_segments.append(content)
+        return f"CODEXBOLDTOKEN{len(bold_segments) - 1}"
+
+    text = re.sub(r"\*\*(.+?)\*\*", replace_bold, text)
+    text = re.sub(r"__(.+?)__", replace_bold, text)
+
+    escaped = html.escape(text)
+    for idx, content in enumerate(bold_segments):
+        token = f"CODEXBOLDTOKEN{idx}"
+        bold_text = html.escape(content)
+        escaped = escaped.replace(token, f"<b>{bold_text}</b>")
+
+    return escaped

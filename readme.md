@@ -10,7 +10,7 @@ Transcribe and summarize video/audio content from YouTube, Twitter, and other so
 - 📧 **Email notifications**: Markdown summaries converted to beautiful HTML
 - 📱 **Telegram integration**: Auto-converts long summaries to PDF
 - 🚀 **MLX-accelerated**: Optimized for M-series chip performance
-- 🤖 **Multi-LLM support**: Works with GPT-4, Claude, Gemini, and more via LiteLLM
+- 🤖 **Codex CLI summaries**: Uses Codex to produce investment-focused insights
 
 ## Requirements
 
@@ -19,6 +19,7 @@ Transcribe and summarize video/audio content from YouTube, Twitter, and other so
 - **uv** (Python package installer)
 - **ffmpeg** (for audio processing)
 - **Homebrew** (for installation)
+- **Bun** (for Codex CLI via bunx)
 
 ## Installation
 
@@ -46,22 +47,21 @@ This will build the package and install the `yt-transcribe` command to your PATH
 
 Configure via environment variables (add to `~/.zshrc` or `~/.bashrc`):
 
-### LLM Configuration (required)
+### Codex Configuration (required)
 
 ```bash
-# Choose your LLM provider:
+# Authenticate Codex (recommended)
+bunx @openai/codex@latest login
 
-# OpenAI (GPT-4)
-export LITELLM_MODEL="gpt-4o"
+# Or set an API key directly
 export OPENAI_API_KEY="sk-..."
 
-# Anthropic (Claude)
-export LITELLM_MODEL="claude-3-5-sonnet-20241022"
-export ANTHROPIC_API_KEY="sk-ant-..."
-
-# Google (Gemini)
-export LITELLM_MODEL="gemini/gemini-pro"
-export GEMINI_API_KEY="..."
+# Optional: override the model used by Codex (defaults to gpt-5.2-codex)
+export CODEX_MODEL="gpt-5.2-codex"
+# For more general reasoning:
+# export CODEX_MODEL="gpt-5.2"
+# For deeper reasoning (slower):
+# export CODEX_MODEL="gpt-5.2-pro"
 ```
 
 ### Email Configuration (optional)
@@ -168,7 +168,7 @@ The tool follows a resumable 5-step workflow:
 1. **Get Info** - Fetch video metadata
 2. **Download** - Extract audio from video
 3. **Transcribe** - Convert speech to text (MLX Whisper)
-4. **Summarize** - Generate insights (LiteLLM)
+4. **Summarize** - Generate insights (Codex CLI)
 5. **Notify** - Send via email + Telegram
 
 Each step creates a `.done` marker file. If interrupted, use `-r` to resume.
@@ -203,9 +203,9 @@ See [agents.md](agents.md) for detailed development notes on the agentic archite
 
 This tool is optimized for M-series Macs. MLX Whisper requires Apple Silicon to run efficiently.
 
-### "LITELLM_MODEL environment variable not set"
+### "Codex CLI credentials not found"
 
-Configure your LLM provider as shown in the Configuration section above.
+Run `bunx @openai/codex@latest login` or set `OPENAI_API_KEY` as shown above.
 
 ### "TELEGRAM_BOT_TOKEN environment variable not set"
 
@@ -231,5 +231,5 @@ MIT
 Built with:
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) - Video downloading
 - [MLX Whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper) - Speech recognition
-- [LiteLLM](https://github.com/BerriAI/litellm) - Unified LLM interface
+- Codex CLI - Summarization
 - [ReportLab](https://www.reportlab.com/) - PDF generation
