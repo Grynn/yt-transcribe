@@ -1,6 +1,11 @@
 # yt-transcribe
 
-Transcribe and summarize video/audio content from YouTube, Twitter, and other sources with AI-powered analysis. Optimized for Apple Silicon Macs using MLX-accelerated Whisper.
+Transcribe and summarize video/audio content from YouTube, Twitter, and other sources with AI-powered analysis. Optimized for Apple Silicon Macs using MLX-accelerated Whisper. When done, send summary by email/telegram.
+
+Use case: (purely for myself): Come across an interesting but long YouTube or X video, send to this cli tool and get an email with summary and link.
+YouTube transcripts are half-assed at best and X does not have any. So use whisper (local) to transcribe speech.
+
+Does not yet do diarization.
 
 ## Features
 

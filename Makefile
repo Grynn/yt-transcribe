@@ -1,21 +1,39 @@
-.PHONY: install clean dev test
+.PHONY: help install clean dev test
 
 INSTALL_DIR = $(shell brew --prefix)/bin
 SCRIPT_NAME = yt-transcribe
 
+help:
+	@echo "yt-transcribe - YouTube video transcription and summarization"
+	@echo ""
+	@echo "Usage: make [target]"
+	@echo ""
+	@echo "Targets:"
+	@echo "  help     Show this help message"
+	@echo "  install  Install yt-transcribe via uv tool"
+	@echo "  dev      Install in development mode"
+	@echo "  test     Run tests"
+	@echo "  clean    Uninstall and remove build artifacts"
+	@echo ""
+	@echo "Configuration: ~/.config/yt-transcribe/"
+	@echo "  config.toml  - Telegram/email settings"
+	@echo "  prompt.md    - Summarization prompt"
+
 install:
 	@echo "Building and installing $(SCRIPT_NAME)..."
-	@uv build
 	@uv tool install --force .
 	@echo "Installation complete. $(SCRIPT_NAME) is now available in your PATH."
 	@echo ""
-	@echo "Configure with environment variables:"
-	@echo "  OPENAI_API_KEY - For Codex CLI authentication"
-	@echo "  CODEX_MODEL - Optional Codex model override (default: gpt-5.2-codex)"
-	@echo "  EMAIL_RECIPIENT - Email address for notifications"
-	@echo "  EMAIL_SENDER - Sender email address"
-	@echo "  TELEGRAM_BOT_TOKEN - Telegram bot token"
-	@echo "  TELEGRAM_CHAT_ID - Telegram chat ID"
+	@echo "Configure via ~/.config/yt-transcribe/config.toml:"
+	@echo "  [telegram]"
+	@echo "  token = \"your-bot-token\""
+	@echo "  chat_id = \"your-chat-id\""
+	@echo ""
+	@echo "  [email]"
+	@echo "  recipient = \"you@example.com\""
+	@echo ""
+	@echo "Customize the summarization prompt:"
+	@echo "  ~/.config/yt-transcribe/prompt.md"
 
 dev:
 	@echo "Installing in development mode..."

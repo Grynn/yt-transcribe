@@ -68,11 +68,43 @@ def get_email_sender() -> Optional[str]:
         return env_sender
     return _config.get("email", {}).get("sender")
 
-# Summarization prompt for investment insights
-SUMMARIZATION_PROMPT = """* **Core insights:** Bullet point the key ideas, focusing on what's actionable for investment decisions (market signals, timing, risks, opportunities)
+
+def get_prompt_path() -> Path:
+    """Get prompt file path in config directory."""
+    xdg_config = os.environ.get("XDG_CONFIG_HOME")
+    if xdg_config:
+        config_dir = Path(xdg_config) / "yt-transcribe"
+    else:
+        config_dir = Path.home() / ".config" / "yt-transcribe"
+    return config_dir / "prompt.md"
+
+
+def get_default_prompt() -> str:
+    """Return the default summarization prompt."""
+    return """* **Core insights:** Bullet point the key ideas, focusing on what's actionable for investment decisions (market signals, timing, risks, opportunities)
 * **Non-consensus views:** What contrarian, surprising, or non-obvious points were made? Include specific quotes if striking
 * **Alpha signals:** Any mentions of emerging trends, inefficiencies, or insights that aren't yet priced in by markets?
+* If source is not in English, translate to English.
 """
+
+
+def deploy_default_prompt() -> Path:
+    """Deploy default prompt.md to config directory if not present."""
+    prompt_path = get_prompt_path()
+    if not prompt_path.exists():
+        prompt_path.parent.mkdir(parents=True, exist_ok=True)
+        prompt_path.write_text(get_default_prompt())
+    return prompt_path
+
+
+def get_summarization_prompt() -> str:
+    """Get summarization prompt from config directory, deploying default if needed."""
+    prompt_path = deploy_default_prompt()
+    return prompt_path.read_text()
+
+
+# Summarization prompt - loaded from config directory
+SUMMARIZATION_PROMPT = get_summarization_prompt()
 
 # Whisper model for transcription
 WHISPER_MODEL = "mlx-community/whisper-large-v3-turbo"
@@ -80,10 +112,12 @@ WHISPER_MODEL = "mlx-community/whisper-large-v3-turbo"
 # Telegram character limit
 TELEGRAM_CHAR_LIMIT = 4096
 
+
 # Check if running on Apple Silicon
 def is_apple_silicon() -> bool:
     """Check if running on Apple Silicon Mac."""
     return platform.system() == "Darwin" and platform.machine() == "arm64"
+
 
 def check_platform():
     """Verify platform requirements."""
