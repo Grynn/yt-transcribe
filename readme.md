@@ -44,10 +44,18 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ### 3. Install yt-transcribe
 
 ```bash
+uv tool install git+https://github.com/grynn/yt-transcribe
+```
+
+Or clone and install locally:
+
+```bash
+git clone https://github.com/grynn/yt-transcribe
+cd yt-transcribe
 make install
 ```
 
-This will build the package and install the `yt-transcribe` command to your PATH.
+This will install the `yt-transcribe` command to your PATH.
 
 ## Configuration
 
