@@ -1,6 +1,26 @@
 # yt-transcribe configuration example
 # Copy this file to ~/.config/yt-transcribe/config.toml and fill in your values
 
+[codex]
+# Codex CLI configuration for summarization
+# Default: uses OpenAI's Codex (gpt-5.2-codex) with standard OpenAI API
+
+# Optional: Use GLM-4.7 or other custom providers
+# model = "glm-4.7"  # Model name (glm-4.7, glm-4.7-flash, gpt-5.2-codex, etc.)
+# api_key = "YOUR_API_KEY_HERE"  # API key for the provider
+# base_url = "https://api.z.ai/api/coding/paas/v4"  # Custom API endpoint (e.g., for z.ai GLM-4.7)
+
+# Examples for popular providers:
+# z.ai GLM-4.7 (coding plan):
+#   model = "glm-4.7"
+#   api_key = "your_zai_api_key"
+#   base_url = "https://api.z.ai/api/coding/paas/v4"
+#
+# z.ai GLM-4.7-flash (free tier):
+#   model = "glm-4.7-flash"
+#   api_key = "your_zai_api_key"
+#   base_url = "https://api.z.ai/api/coding/paas/v4"
+
 [telegram]
 token = "YOUR_BOT_TOKEN_HERE"  # Get from @BotFather on Telegram
 chat_id = "YOUR_CHAT_ID_HERE"  # Get from @userinfobot on Telegram

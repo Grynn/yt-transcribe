@@ -17,6 +17,8 @@ def summarize_with_codex(
     prompt: str,
     state_dir: Path,
     model: Optional[str] = None,
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
 ) -> str:
     """Summarize transcription using the Codex CLI.
 
@@ -25,11 +27,13 @@ def summarize_with_codex(
         prompt: The summarization prompt.
         state_dir: Directory for Codex output artifacts.
         model: Optional model name override (CODEX_MODEL env var if unset, defaults to gpt-5.2-codex).
+        api_key: Optional API key override (uses config or OPENAI_API_KEY if unset).
+        base_url: Optional base URL override for custom providers (uses config or OPENAI_BASE_URL if unset).
 
     Returns:
         The summary text.
     """
-    _ensure_codex_ready()
+    _ensure_codex_ready(api_key)
 
     if model is None:
         model = os.getenv("CODEX_MODEL", "gpt-5.2-codex")
@@ -53,12 +57,20 @@ def summarize_with_codex(
 
     cmd.append("-")
 
+    # Prepare environment with custom API key/base URL if provided
+    env = os.environ.copy()
+    if api_key:
+        env["OPENAI_API_KEY"] = api_key
+    if base_url:
+        env["OPENAI_BASE_URL"] = base_url
+
     result = subprocess.run(
         cmd,
         input=full_prompt,
         text=True,
         capture_output=True,
         check=False,
+        env=env,
     )
 
     if result.returncode != 0:
@@ -89,16 +101,18 @@ def _build_prompt(transcription: str, prompt: str) -> str:
     )
 
 
-def _ensure_codex_ready() -> None:
+def _ensure_codex_ready(api_key: Optional[str] = None) -> None:
     """Fail fast if Codex CLI or credentials are missing."""
     if shutil.which("bunx") is None:
         raise RuntimeError(
             "bunx not found. Install Bun or ensure bunx is on PATH before running."
         )
 
-    if os.getenv("OPENAI_API_KEY"):
+    # Check if API key is provided directly or via environment
+    if api_key or os.getenv("OPENAI_API_KEY"):
         return
 
+    # Check for Codex auth files
     codex_dir = Path.home() / ".codex"
     for filename in CODEX_AUTH_FILES:
         if (codex_dir / filename).exists():
@@ -106,5 +120,5 @@ def _ensure_codex_ready() -> None:
 
     raise RuntimeError(
         "Codex CLI credentials not found. Run `bunx @openai/codex@latest login` "
-        "or set OPENAI_API_KEY."
+        "or set OPENAI_API_KEY, or configure codex.api_key in config.toml."
     )

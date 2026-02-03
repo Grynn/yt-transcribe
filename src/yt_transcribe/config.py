@@ -4,13 +4,48 @@ import os
 import platform
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict
 
 # Use tomllib (Python 3.11+) or tomli (Python 3.10)
 if sys.version_info >= (3, 11):
     import tomllib
 else:
     import tomli as tomllib
+
+
+# Provider configurations for different AI models
+PROVIDER_CONFIGS: Dict[str, Dict[str, str]] = {
+    "glm": {
+        "base_url": "https://api.z.ai/api/coding/paas/v4",
+        "model": "glm-4.7",
+        "api_key_env": "GLM_API_KEY",
+    },
+    "glm-flash": {
+        "base_url": "https://api.z.ai/api/coding/paas/v4",
+        "model": "glm-4.7-flash",
+        "api_key_env": "GLM_API_KEY",
+    },
+    "deepseek": {
+        "base_url": "https://api.deepseek.com",
+        "model": "deepseek-chat",
+        "api_key_env": "DEEPSEEK_API_KEY",
+    },
+    "deepseek-r1": {
+        "base_url": "https://api.deepseek.com",
+        "model": "deepseek-r1",
+        "api_key_env": "DEEPSEEK_API_KEY",
+    },
+    "grok": {
+        "base_url": "https://api.x.ai/v1",
+        "model": "grok-2-1212",
+        "api_key_env": "XAI_API_KEY",
+    },
+    "openai": {
+        "base_url": "",  # Use default OpenAI endpoint
+        "model": "gpt-5.2-codex",
+        "api_key_env": "OPENAI_API_KEY",
+    },
+}
 
 
 def get_config_path() -> Path:
@@ -67,6 +102,79 @@ def get_email_sender() -> Optional[str]:
     if env_sender:
         return env_sender
     return _config.get("email", {}).get("sender")
+
+
+def get_codex_api_key() -> Optional[str]:
+    """Get Codex API key from config or environment."""
+    env_key = os.environ.get("OPENAI_API_KEY")
+    if env_key:
+        return env_key
+    return _config.get("codex", {}).get("api_key")
+
+
+def get_codex_base_url() -> Optional[str]:
+    """Get Codex base URL from config or environment for custom providers (e.g., z.ai GLM-4.7)."""
+    env_url = os.environ.get("OPENAI_BASE_URL")
+    if env_url:
+        return env_url
+    return _config.get("codex", {}).get("base_url")
+
+
+def get_codex_model() -> str:
+    """Get Codex model from config or environment."""
+    env_model = os.environ.get("CODEX_MODEL")
+    if env_model:
+        return env_model
+    return _config.get("codex", {}).get("model", "gpt-5.2-codex")
+
+
+def configure_provider(provider: str) -> Dict[str, str]:
+    """Configure environment variables for a specific provider.
+
+    Args:
+        provider: Provider name (glm, deepseek, grok, openai, etc.)
+
+    Returns:
+        Dictionary with the configured base_url, model, and api_key_env.
+
+    Raises:
+        ValueError: If provider is not supported.
+    """
+    provider = provider.lower()
+
+    if provider not in PROVIDER_CONFIGS:
+        available = ", ".join(sorted(PROVIDER_CONFIGS.keys()))
+        raise ValueError(
+            f"Unsupported provider '{provider}'. Available providers: {available}"
+        )
+
+    config = PROVIDER_CONFIGS[provider]
+
+    # Get API key from provider-specific env var or fallback to OPENAI_API_KEY
+    api_key = os.environ.get(config["api_key_env"]) or os.environ.get("OPENAI_API_KEY")
+
+    if not api_key:
+        raise ValueError(
+            f"API key not found for provider '{provider}'. "
+            f"Set {config['api_key_env']} or OPENAI_API_KEY environment variable."
+        )
+
+    # Set environment variables for this process and subprocesses
+    os.environ["OPENAI_API_KEY"] = api_key
+
+    if config["base_url"]:
+        os.environ["OPENAI_BASE_URL"] = config["base_url"]
+        # Also remove any existing base URL to avoid conflicts
+        if "OPENAI_BASE_URL" in os.environ and not config["base_url"]:
+            del os.environ["OPENAI_BASE_URL"]
+
+    os.environ["CODEX_MODEL"] = config["model"]
+
+    return {
+        "base_url": config["base_url"],
+        "model": config["model"],
+        "api_key_env": config["api_key_env"],
+    }
 
 
 def get_prompt_path() -> Path:

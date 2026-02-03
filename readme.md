@@ -79,20 +79,61 @@ Alternatively, configure via environment variables (add to `~/.zshrc` or `~/.bas
 
 ### Codex Configuration (required)
 
+**Option 1: Use --model flag (Recommended for quick switching)**
+
 ```bash
-# Authenticate Codex (recommended)
-bunx @openai/codex@latest login
+# Set the appropriate API key for your provider
+export GLM_API_KEY="your_glm_key"        # For glm/glm-flash
+export DEEPSEEK_API_KEY="your_deepseek_key"  # For deepseek/deepseek-r1
+export XAI_API_KEY="your_xai_key"         # For grok
+export OPENAI_API_KEY="your_openai_key"   # For openai (default)
 
-# Or set an API key directly
-export OPENAI_API_KEY="sk-..."
-
-# Optional: override the model used by Codex (defaults to gpt-5.2-codex)
-export CODEX_MODEL="gpt-5.2-codex"
-# For more general reasoning:
-# export CODEX_MODEL="gpt-5.2"
-# For deeper reasoning (slower):
-# export CODEX_MODEL="gpt-5.2-pro"
+# Then use the --model flag
+yt-transcribe --model glm <URL>
 ```
+
+**Option 2: Authenticate with OpenAI Codex (for default usage)**
+
+```bash
+bunx @openai/codex@latest login
+```
+
+**Option 3: Set OPENAI_API_KEY directly**
+
+```bash
+export OPENAI_API_KEY="sk-..."
+export CODEX_MODEL="gpt-5.2-codex"
+```
+
+#### Using GLM-4.7 (z.ai Coding Plan)
+
+To use z.ai's GLM-4.7 model instead of OpenAI's Codex:
+
+**Option 1: Via config file (Recommended)**
+
+Add to `~/.config/yt-transcribe/config.toml`:
+
+```toml
+[codex]
+model = "glm-4.7"
+api_key = "your_zai_api_key"
+base_url = "https://api.z.ai/api/coding/paas/v4"
+```
+
+**Option 2: Via environment variables**
+
+```bash
+export OPENAI_API_KEY="your_zai_api_key"
+export OPENAI_BASE_URL="https://api.z.ai/api/coding/paas/v4"
+export CODEX_MODEL="glm-4.7"
+```
+
+**Available GLM models:**
+- `glm-4.7` - Full GLM-4.7 model (requires coding plan subscription)
+- `glm-4.7-flash` - Free tier (lower quality but no subscription needed)
+- `glm-4.5-air` - Lighter/faster variant
+
+Get your API key from [z.ai](https://docs.z.ai/guides/overview/quick-start).
 
 ### Email Configuration (optional)
 
@@ -127,13 +168,15 @@ Transcripts are uploaded to PrivateBin for easy sharing. The default server is `
 ### Basic usage
 
 ```bash
-yt-transcribe <URL>
+yt-transcribe <URL-or-file>
 ```
+
+If you pass a local video file (e.g., `.mp4`, `.mov`), yt-transcribe will skip yt-dlp and use `ffmpeg` to extract audio to an `.mp3` for transcription.
 
 ### With resume support
 
 ```bash
-yt-transcribe -r <URL>
+yt-transcribe -r <URL-or-file>
 ```
 
 Resume from previous failed run (uses cached results for completed steps).
@@ -141,10 +184,39 @@ Resume from previous failed run (uses cached results for completed steps).
 ### With package upgrades
 
 ```bash
-yt-transcribe -U <URL>
+yt-transcribe -U <URL-or-file>
 ```
 
 Upgrades MLX Whisper and yt-dlp to latest versions before processing.
+
+### With custom AI model provider
+
+```bash
+# Use GLM-4.7 (requires GLM_API_KEY)
+yt-transcribe --model glm <URL>
+
+# Use DeepSeek (requires DEEPSEEK_API_KEY)
+yt-transcribe --model deepseek <URL>
+
+# Use Grok (requires XAI_API_KEY)
+yt-transcribe --model grok <URL>
+
+# Use GLM-4.7 Flash free tier (requires GLM_API_KEY)
+yt-transcribe --model glm-flash <URL>
+
+# Use DeepSeek R1 reasoning model (requires DEEPSEEK_API_KEY)
+yt-transcribe --model deepseek-r1 <URL>
+```
+
+The `--model` option automatically configures the appropriate API endpoint and model for the selected provider. Environment variables are set only for the current process and won't affect your shell.
+
+**Available providers:**
+- `glm` - z.ai GLM-4.7 (coding plan, $3/mo)
+- `glm-flash` - z.ai GLM-4.7 Flash (free tier)
+- `deepseek` - DeepSeek V3.2 chat
+- `deepseek-r1` - DeepSeek R1 reasoning
+- `grok` - xAI Grok-2
+- `openai` - OpenAI GPT-5.2 Codex (default)
 
 ## Examples
 
@@ -170,12 +242,18 @@ yt-transcribe https://www.youtube.com/watch?v=...
 yt-transcribe -r https://www.youtube.com/watch?v=...
 ```
 
+### Transcribe a local file
+
+```bash
+yt-transcribe ~/Downloads/my-video.mp4
+```
+
 ## Output
 
-The tool generates several files in `/tmp/{url_hash}/`:
+The tool generates several files in `/tmp/{source_hash}/`:
 
 - `info.json` - Video metadata
-- `{video_id}.opus` - Extracted audio
+- `{video_id}.*` - Prepared audio (downloaded or extracted)
 - `{video_id}.txt` - Raw transcription
 - `{video_id}.md` - **Final summary** (this is sent via email/Telegram)
 - `privatebin_url.txt` - Link to full transcript on PrivateBin
