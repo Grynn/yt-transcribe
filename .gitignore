@@ -35,6 +35,9 @@ env/
 *~
 .DS_Store
 
+# Local agent settings
+.claude/
+
 # Testing
 .pytest_cache/
 .coverage
