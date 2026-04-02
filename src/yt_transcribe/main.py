@@ -98,10 +98,15 @@ def _ytdlp_common_opts() -> dict:
     # Equivalent of:
     # --extractor-args "youtube:player_client=default,-android_sdkless"
     # --remote-components ejs:github
-    return {
+    # --cookies-from-browser chrome  (override via YTDLP_COOKIES_BROWSER env var)
+    browser = os.environ.get("YTDLP_COOKIES_BROWSER", "chrome")
+    opts: dict = {
         "extractor_args": {"youtube": {"player_client": ["default", "-android_sdkless"]}},
         "remote_components": ["ejs:github"],
     }
+    if browser:
+        opts["cookiesfrombrowser"] = (browser, None, None, None)
+    return opts
 
 
 _AUDIO_EXTENSIONS = {
