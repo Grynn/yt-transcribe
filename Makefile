@@ -22,7 +22,7 @@ help:
 
 install:
 	@echo "Building and installing $(SCRIPT_NAME)..."
-	@uv tool install --force .
+	@uv tool install --force -U .
 	@echo "Installation complete. $(SCRIPT_NAME) is now available in your PATH."
 	@echo ""
 	@echo "Configure via ~/.config/yt-transcribe/config.toml:"
