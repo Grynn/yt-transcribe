@@ -588,11 +588,18 @@ def send_notifications(
 @click.option("-U", "--upgrade", is_flag=True, help="Upgrade tools to latest versions")
 @click.option("-r", "--resume", is_flag=True, help="Resume from previous failed run")
 @click.option(
+    "-t",
+    "--transcribe",
+    "transcribe_only",
+    is_flag=True,
+    help="Transcript-only mode: skip LLM summarization, still upload and email transcript",
+)
+@click.option(
     "--model",
     type=click.Choice(sorted(PROVIDER_CONFIGS.keys()), case_sensitive=False),
     help="AI model provider to use for summarization (glm, deepseek, grok, openai, etc.)",
 )
-def cli(source: str, upgrade: bool, resume: bool, model: Optional[str]):
+def cli(source: str, upgrade: bool, resume: bool, transcribe_only: bool, model: Optional[str]):
     """Transcribe and summarize video/audio content from URLs or local files.
 
     Optimized for Apple Silicon Macs using MLX-accelerated Whisper.
@@ -663,16 +670,25 @@ def cli(source: str, upgrade: bool, resume: bool, model: Optional[str]):
     # Step 3: Transcribe
     transcription = transcribe_audio(audio_filename, state, video_id, upgrade)
 
-    # Step 4: Summarize (may fail gracefully)
-    summary, error_details = summarize_transcription(transcription, title, webpage_url, state, video_id)
-
     md_filename = str(state.state_dir / f"{video_id}.md")
     full_path = os.path.realpath(md_filename)
 
-    if summary:
-        click.echo(f"Summary saved to {full_path}")
+    if transcribe_only:
+        # Step 4 (skipped): Use transcript itself as the notification body.
+        click.echo("Transcript-only mode: skipping summarization")
+        summary = f"# Transcript: {title}\n\nURL: {webpage_url}\n\n---\n\n{transcription}"
+        with open(md_filename, "w") as f:
+            f.write(summary)
+        error_details = None
+        click.echo(f"Transcript saved to {full_path}")
     else:
-        click.echo(f"⚠️ Summary generation failed (details will be in email)")
+        # Step 4: Summarize (may fail gracefully)
+        summary, error_details = summarize_transcription(transcription, title, webpage_url, state, video_id)
+
+        if summary:
+            click.echo(f"Summary saved to {full_path}")
+        else:
+            click.echo(f"⚠️ Summary generation failed (details will be in email)")
 
     # Step 5: Upload full transcript to PrivateBin (always runs, even if summary failed)
     privatebin_url = upload_full_transcript(transcription, title, webpage_url, state)
