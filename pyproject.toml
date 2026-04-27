@@ -1,6 +1,6 @@
 [project]
 name = "yt-transcribe"
-version = "0.2.3"
+version = "0.2.4"
 description = "Transcribe and summarize video/audio content with AI - optimized for Apple Silicon Macs"
 readme = "readme.md"
 requires-python = ">=3.10"
