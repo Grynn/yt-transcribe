@@ -42,7 +42,7 @@ PROVIDER_CONFIGS: Dict[str, Dict[str, str]] = {
     },
     "openai": {
         "base_url": "",  # Use default OpenAI endpoint
-        "model": "gpt-5.2-codex",
+        "model": "gpt-5.6-terra",
         "api_key_env": "OPENAI_API_KEY",
     },
 }
@@ -125,7 +125,7 @@ def get_codex_model() -> str:
     env_model = os.environ.get("CODEX_MODEL")
     if env_model:
         return env_model
-    return _config.get("codex", {}).get("model", "gpt-5.2-codex")
+    return _config.get("codex", {}).get("model", "gpt-5.6-terra")
 
 
 def configure_provider(provider: str) -> Dict[str, str]:

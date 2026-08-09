@@ -26,7 +26,7 @@ def summarize_with_codex(
         transcription: The text to summarize.
         prompt: The summarization prompt.
         state_dir: Directory for Codex output artifacts.
-        model: Optional model name override (CODEX_MODEL env var if unset, defaults to gpt-5.2-codex).
+        model: Optional model name override (CODEX_MODEL env var if unset, defaults to gpt-5.6-terra).
         api_key: Optional API key override (uses config or OPENAI_API_KEY if unset).
         base_url: Optional base URL override for custom providers (uses config or OPENAI_BASE_URL if unset).
 
@@ -36,7 +36,7 @@ def summarize_with_codex(
     _ensure_codex_ready(api_key)
 
     if model is None:
-        model = os.getenv("CODEX_MODEL", "gpt-5.2-codex")
+        model = os.getenv("CODEX_MODEL", "gpt-5.6-terra")
 
     output_path = state_dir / "codex_summary.txt"
     if output_path.exists():
@@ -92,8 +92,8 @@ def summarize_with_codex(
 def _build_prompt(transcription: str, prompt: str) -> str:
     """Build the Codex prompt for summarization."""
     return (
-        "You are a financial analyst helping investors extract actionable insights from content.\n"
-        "Follow the format exactly and keep the response concise.\n"
+        "You write crisp, insightful summaries of video transcripts. "
+        "Follow the requested sections and format exactly, and keep each concise.\n"
         f"{prompt}\n\n"
         "Transcript:\n"
         f"{transcription}\n\n"

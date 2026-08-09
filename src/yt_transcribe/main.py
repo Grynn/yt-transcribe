@@ -599,7 +599,14 @@ def send_notifications(
     type=click.Choice(sorted(PROVIDER_CONFIGS.keys()), case_sensitive=False),
     help="AI model provider to use for summarization (glm, deepseek, grok, openai, etc.)",
 )
-def cli(source: str, upgrade: bool, resume: bool, transcribe_only: bool, model: Optional[str]):
+@click.option(
+    "-N",
+    "--no-notify",
+    is_flag=True,
+    help="Skip email/Telegram/desktop notifications (still writes the summary .md). "
+         "Also enabled by setting YT_TRANSCRIBE_NO_NOTIFY=1.",
+)
+def cli(source: str, upgrade: bool, resume: bool, transcribe_only: bool, model: Optional[str], no_notify: bool):
     """Transcribe and summarize video/audio content from URLs or local files.
 
     Optimized for Apple Silicon Macs using MLX-accelerated Whisper.
@@ -693,8 +700,11 @@ def cli(source: str, upgrade: bool, resume: bool, transcribe_only: bool, model: 
     # Step 5: Upload full transcript to PrivateBin (always runs, even if summary failed)
     privatebin_url = upload_full_transcript(transcription, title, webpage_url, state)
 
-    # Step 6: Send notifications (always runs, includes error details if summary failed)
-    send_notifications(summary, full_path, state, title, privatebin_url, webpage_url, error_details)
+    # Step 6: Send notifications (skipped with --no-notify / YT_TRANSCRIBE_NO_NOTIFY=1)
+    if no_notify or os.environ.get("YT_TRANSCRIBE_NO_NOTIFY"):
+        click.echo("Notifications skipped (--no-notify)")
+    else:
+        send_notifications(summary, full_path, state, title, privatebin_url, webpage_url, error_details)
 
     click.echo("\nAll steps completed successfully!")
     click.echo(f"\nFinal output: {full_path}")

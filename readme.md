@@ -102,7 +102,7 @@ bunx @openai/codex@latest login
 
 ```bash
 export OPENAI_API_KEY="sk-..."
-export CODEX_MODEL="gpt-5.2-codex"
+export CODEX_MODEL="gpt-5.6-terra"
 ```
 
 #### Using GLM-4.7 (z.ai Coding Plan)
@@ -216,7 +216,7 @@ The `--model` option automatically configures the appropriate API endpoint and m
 - `deepseek` - DeepSeek V3.2 chat
 - `deepseek-r1` - DeepSeek R1 reasoning
 - `grok` - xAI Grok-2
-- `openai` - OpenAI GPT-5.2 Codex (default)
+- `openai` - OpenAI GPT-5.6 Terra via the latest Codex CLI (default)
 
 ## Examples
 
